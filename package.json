@@ -1,0 +1,11 @@
+{
+  "name": "pantaloons",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "git@github.com:frostiq/pantaloons.git",
+  "author": "pantaloons",
+  "license": "MIT",
+  "dependencies": {
+    "@openzeppelin/contracts": "^4.6.0"
+  }
+}
