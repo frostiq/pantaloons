@@ -27,11 +27,16 @@ contract Appraiser is Ownable {
         console.log("Welcome to Appraisal contract");
     }
 
-    // Only owner contract can set the appraisal, updating the NFTAppraisal information
     function setAppraisal(address nftAddress, uint256 volatility, uint256 lastPrice, uint256 recommendedLoanAmount) public onlyOwner {
         uint256 timeNow = block.timestamp;
         appraisals[nftAddress] = NFTAppraisal(volatility, lastPrice, recommendedLoanAmount, timeNow);
         emit AppraisalSubmitted(nftAddress, volatility, lastPrice, recommendedLoanAmount, timeNow);
+    }
+
+    function getAppraisal(address nftAddress, uint256 id) external view returns (uint256, uint256) {
+        uint256 lastPrice = appraisals[nftAddress].lastPrice;
+        uint256 recommendedLoanAmount = appraisals[nftAddress].recommendedLoanAmount;
+        return (lastPrice, recommendedLoanAmount);
     }
 
 }
