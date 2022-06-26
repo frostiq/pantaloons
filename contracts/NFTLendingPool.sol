@@ -39,9 +39,13 @@ contract NFTLendingPool is INFTLendingPool, ERC20 {
         // uint256 fairPrice = appraiser.getAppraisal(nft, id);
     }
 
-    function depositNFT(IERC721 nft, uint256 id) external {}
+    function depositNFT(IERC721 nft, uint256 id) external {
+        
+    }
 
-    function withdrawNFT(IERC721 nft, uint256 id) external {}
+    function withdrawNFT(IERC721 nft, uint256 id) external {
+
+    }
 
     function repayBorrow(uint256 repayAmount) external {}
 

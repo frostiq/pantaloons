@@ -17,6 +17,4 @@ interface INFTLendingPool {
     function repayBorrow(uint256 repayAmount) external;
 
     function liquidateBorrow(IERC721 nft, uint256 id) external;
-
-    function appraise(IERC721 nft, uint256 appraisal) external;
 }
