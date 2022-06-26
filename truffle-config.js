@@ -38,6 +38,12 @@ module.exports = {
         return new HDWalletProvider(process.env.MNEMONIC, `https://kovan.optimism.io`)
       },
       network_id: 69
+    },
+    optimism_kovan: {
+      provider: function () {
+        return new HDWalletProvider(process.env.MNEMONIC, `https://kovan.optimism.io`)
+      },
+      network_id: 69
     }
   },
 
