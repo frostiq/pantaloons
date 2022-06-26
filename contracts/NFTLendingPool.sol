@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "abdk-libraries-solidity/ABDKMath64x64.sol";
 import "./INFTLendingPool.sol";
 import "./IAppraiser.sol";
@@ -15,6 +16,8 @@ import "./IAppraiser.sol";
 // - Lender interest rate
 
 contract NFTLendingPool is INFTLendingPool, ERC20 {
+    using EnumerableSet for EnumerableSet.AddressSet;
+    using EnumerableSet for EnumerableSet.UintSet;
     using ABDKMath64x64 for int128;
 
     IERC20 public underlyingToken;
@@ -43,8 +46,8 @@ contract NFTLendingPool is INFTLendingPool, ERC20 {
 
     mapping(IERC721 => uint256) public assetPrice;
     mapping(IERC721 => mapping(uint256 => address)) public depositor;
-    mapping(address => NFT[]) depositedCollateral; 
-    mapping(uint256 => Loan) public loan;
+    mapping(address => EnumerableSet.AddressSet) internal depositedCollateralToken;
+    mapping(address => mapping(address => EnumerableSet.UintSet)) internal depositedCollateralTokenId;
 
     event Borrowed(address indexed borrower, uint256 amount);
     event Repaid(address indexed borrower, uint256 amount);
@@ -97,6 +100,9 @@ contract NFTLendingPool is INFTLendingPool, ERC20 {
     function depositNFT(IERC721 nft, uint256 id) external {
         depositor[nft][id] = msg.sender;
         nft.transferFrom(msg.sender, address(this), id);
+
+        depositedCollateralToken[msg.sender].add(address(nft));
+        depositedCollateralTokenId[msg.sender][address(nft)].add(id);
         emit Deposit(msg.sender, id);
     }
 
@@ -105,6 +111,10 @@ contract NFTLendingPool is INFTLendingPool, ERC20 {
         require(depositor[nft][id] == msg.sender);
         delete depositor[nft][id];
         nft.transferFrom(address(this), msg.sender, id);
+
+        depositedCollateralToken[msg.sender].remove(address(nft));
+        depositedCollateralTokenId[msg.sender][address(nft)].remove(id);
+
         emit Withdraw(msg.sender, id);
     }
 
@@ -153,11 +163,13 @@ contract NFTLendingPool is INFTLendingPool, ERC20 {
         public
         returns (uint256)
     {
-        uint256 length = depositedCollateral[borrower].length;
         uint256 sum = 0;
-        for (uint256 index = 0; index < length; index++) {
-            NFT storage nft = depositedCollateral[borrower][index];
-            sum += appraiser.getAppraisal(nft.token, nft.id);
+        address[] memory tokens = depositedCollateralToken[msg.sender].values();
+        for (uint256 i = 0; i < tokens.length; i++) {
+            uint256[] memory ids = depositedCollateralTokenId[msg.sender][tokens[i]].values();
+            for (uint256 j = 0; j < ids.length; j++) {
+                sum += appraiser.getAppraisal(IERC721(tokens[i]), ids[j]);
+            }
         }
 
         return sum;
