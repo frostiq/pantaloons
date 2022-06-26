@@ -10,7 +10,6 @@ import "./IAppraiser.sol";
 
 // TODO:
 // - borrowIndex updates
-// - Superfluid
 // - Lender interest rate
 
 contract NFTLendingPool is INFTLendingPool, ERC20 {
@@ -155,7 +154,8 @@ contract NFTLendingPool is INFTLendingPool, ERC20 {
     function liquidateBorrow(IERC721 nft, uint256 id) external {
         // TODO: LTV check
         int128 discount = ABDKMath64x64.divu(4, 5);
-        uint256 liquidationAmount = discount.mulu(appraiser.getAppraisal(nft, id));
+        (uint256 price, ) = appraiser.getAppraisal(nft, id);
+        uint256 liquidationAmount = discount.mulu(price);
         address borrower = depositor[nft][id];
 
         underlyingToken.transferFrom(msg.sender, address(this), liquidationAmount);
@@ -187,7 +187,8 @@ contract NFTLendingPool is INFTLendingPool, ERC20 {
         for (uint256 i = 0; i < tokens.length; i++) {
             uint256[] memory ids = depositedCollateralTokenId[borrower][tokens[i]].values();
             for (uint256 j = 0; j < ids.length; j++) {
-                sum += appraiser.getAppraisal(IERC721(tokens[i]), ids[j]);
+                (uint256 price, ) = appraiser.getAppraisal(IERC721(tokens[i]), ids[j]);
+                sum += price;
             }
         }
 

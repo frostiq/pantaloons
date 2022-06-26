@@ -1,10 +1,11 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.0;
 
-import "hardhat/console.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "./IAppraiser.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 
-contract Appraiser is Ownable {
+contract Appraiser is Ownable, IAppraiser {
 
     uint256 apprisalCount = 0;
     uint256 appraisalFee = 0.025 ether;
@@ -24,7 +25,6 @@ contract Appraiser is Ownable {
     
     // sets owner to msg.sender by default
     constructor() {
-        console.log("Welcome to Appraisal contract");
     }
 
     function setAppraisal(address nftAddress, uint256 volatility, uint256 lastPrice, uint256 recommendedLoanAmount) public onlyOwner {
@@ -33,9 +33,9 @@ contract Appraiser is Ownable {
         emit AppraisalSubmitted(nftAddress, volatility, lastPrice, recommendedLoanAmount, timeNow);
     }
 
-    function getAppraisal(address nftAddress, uint256 id) external view returns (uint256, uint256) {
-        uint256 lastPrice = appraisals[nftAddress].lastPrice;
-        uint256 recommendedLoanAmount = appraisals[nftAddress].recommendedLoanAmount;
+    function getAppraisal(IERC721 nftAddress, uint256 id) external view returns (uint256, uint256) {
+        uint256 lastPrice = appraisals[address(nftAddress)].lastPrice;
+        uint256 recommendedLoanAmount = appraisals[address(nftAddress)].recommendedLoanAmount;
         return (lastPrice, recommendedLoanAmount);
     }
 
