@@ -21,7 +21,13 @@ contract NFTLendingPool is INFTLendingPool, ERC20 {
   uint totalRepaid;
   uint nbOfLoans;
 
+  struct BorrowSnapshot {
+        uint principal;
+        uint interestIndex;
+    }
 
+    // Mapping of account addresses to outstanding borrow balances
+  mapping(address => BorrowSnapshot) internal accountBorrows;
 
   mapping(IERC721 => uint) public assetPrice;
   mapping(IERC721 => mapping(uint256 => address)) public depositor;
@@ -31,11 +37,11 @@ contract NFTLendingPool is INFTLendingPool, ERC20 {
   event Repaid(uint indexed loanId, uint amount);
   event Bought(uint indexed loanId, uint price);
   event Withdrew(address indexed supplier, uint amount);
+  event Deposit(address indexed borrower, uint id); 
 
     struct Loan {
         IERC721 collection;
         uint tokenId;
-        uint loanDate;
         uint amount;
         address borrowedBy;
     }
@@ -60,16 +66,18 @@ contract NFTLendingPool is INFTLendingPool, ERC20 {
 
     function borrow(uint256 borrowAmount) external {
     
-    IERC721(collection).transferFrom(msg.sender, address(this), tokenId);
-    uint amount = assetPrice[collection] - calculateInterests(assetPrice*0.20);
+    uint principalTimesIndex = borrowSnapshot.principal * borrowIndex;
+    uint TotalDebt = principalTimesIndex / borrowSnapshot.interestIndex;
+
+    uint amount = borrowAmount;
+    assetPrice*0.20;
     loan[nbOfLoans] = Loan({
       collection: collection,
       tokenId: tokenId,
-      loanDate: block.timestamp,
       amount: amount,
       borrowedBy: msg.sender
     });
-    pUSDC.transfer(msg.sender, amount);
+    underlyingToken.transfer(msg.sender, amount);
     totalBorrowed += amount;
 
     emit Borrowed(msg.sender, nbOfLoans, amount);
@@ -78,13 +86,17 @@ contract NFTLendingPool is INFTLendingPool, ERC20 {
 
     function depositNFT(IERC721 nft, uint256 id) external {
         
-        depositor[token][tokenId] = msg.sender;
+        
+        depositor[token][id] = msg.sender;
+        nft.transferFrom(msg.sender,address(this), id);
+        emit Deposit(msg.sender,id);
     }
 
     function withdrawNFT(IERC721 nft, uint256 id) external {
 
-
-        depositor[token][tokenId]
+        delete depositor[token][id] = msg.sender;
+        nft.transferFrom(address(this),msg.sender,id);
+        emit Withdraw(msg.sender,id);
 
     }
 
