@@ -20,6 +20,25 @@ module.exports = {
       },
       network_id: 3
     },
+    cronos: {
+      provider: function () {
+        return new HDWalletProvider(process.env.MNEMONIC, `https://evm-t3.cronos.org/`)
+      },
+      network_id: "*"
+    },
+    polygon_mumbai: {
+      provider: function () {
+        return new HDWalletProvider(process.env.MNEMONIC, 'https://matic-mumbai.chainstacklabs.com')
+      },
+      network_id: 80001,
+      confirmations: 1
+    },
+    optimism_kovan: {
+      provider: function () {
+        return new HDWalletProvider(process.env.MNEMONIC, `https://kovan.optimism.io`)
+      },
+      network_id: 69
+    }
   },
 
   compilers: {
