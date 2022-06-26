@@ -128,13 +128,13 @@ contract NFTLendingPool is INFTLendingPool, ERC20 {
         public
         returns (uint256)
     {
-        return 0;
-    }
-
-    function calculateCollateralValue(address borrower)
-        public
-        returns (uint256)
-    {
         uint256 length = depositedCollateral[borrower].length;
+        uint256 sum = 0;
+        for (uint256 index = 0; index < length; index++) {
+            NFT nft = depositedCollateral[borrower][index];
+            sum += appraiser.appraise(nft.token, nft.index);
+        }
+
+        return sum;
     }
 }
