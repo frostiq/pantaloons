@@ -5,11 +5,14 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import 'abdk-libraries-solidity/ABDKMath64x64.sol';
 import "./INFTLendingPool.sol";
+import "./IAppraiser.sol";
 
 contract NFTLendingPool is INFTLendingPool, ERC20 {
     using ABDKMath64x64 for int128; 
 
     IERC20 public underlyingToken;
+    IAppraiser public appraiser;
+
 
     constructor() ERC20("Pantaloons USDC", "pUSDC") {
     }
@@ -22,9 +25,14 @@ contract NFTLendingPool is INFTLendingPool, ERC20 {
   uint nbOfLoans;
 
 
+  struct NFT {
+    IERC721 token;
+    uint256 id;
+  }
 
   mapping(IERC721 => uint) public assetPrice;
   mapping(IERC721 => mapping(uint256 => address)) public depositor;
+  mapping(address => NFT[]) public depositedCollateral;
   mapping(uint => Loan) public loan;
 
   event Borrowed(address indexed borrower, uint loanId,  uint amount);
@@ -84,7 +92,7 @@ contract NFTLendingPool is INFTLendingPool, ERC20 {
     function withdrawNFT(IERC721 nft, uint256 id) external {
 
 
-        depositor[token][tokenId]
+        depositor[token][tokenId];
 
     }
 
@@ -99,17 +107,20 @@ contract NFTLendingPool is INFTLendingPool, ERC20 {
 
     }
 
-    function liquidateBorrow(IERC721 nft, uint256 id) external {}
-
-    function appraise(IERC721 nft, uint256 appraisal) external {
-
-
-
+    function liquidateBorrow(IERC721 nft, uint256 id) external {
 
     }
 
     function exchangeRateStored() public returns (int128){
         int128 half = ABDKMath64x64.divu(1, 2);
         return half;
+    }
+
+    function calculateCollateralValue(address borrower) public returns (uint256) {
+        return 0;
+    }
+
+    function calculateCollateralValue(address borrower) public returns (uint256) {
+        uint256 length = depositedCollateral[borrower].length
     }
 }
