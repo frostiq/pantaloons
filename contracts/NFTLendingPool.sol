@@ -5,13 +5,11 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "abdk-libraries-solidity/ABDKMath64x64.sol";
 import "./INFTLendingPool.sol";
-import "./IAppraiser.sol";
 
 contract NFTLendingPool is INFTLendingPool, ERC20 {
     using ABDKMath64x64 for int128;
 
     IERC20 public underlyingToken;
-    IAppraiser public appraiser;
 
     constructor() ERC20("Pantaloons USDC", "pUSDC") {}
 
@@ -21,28 +19,25 @@ contract NFTLendingPool is INFTLendingPool, ERC20 {
     uint256 totalBorrowed;
     uint256 totalRepaid;
     uint256 nbOfLoans;
+    uint256 borrowIndex = 1e18; 
+
 
     struct BorrowSnapshot {
         uint256 principal;
         uint256 interestIndex;
     }
 
-    struct NFT {
-        IERC721 token;
-        uint256 id;
-    }
     // Mapping of account addresses to outstanding borrow balances
     mapping(address => BorrowSnapshot) internal accountBorrows;
 
     mapping(IERC721 => uint256) public assetPrice;
     mapping(IERC721 => mapping(uint256 => address)) public depositor;
-    mapping(address => NFT[]) public depositedCollateral;
     mapping(uint256 => Loan) public loan;
 
-    event Borrowed(address indexed borrower, uint256 loanId, uint256 amount);
+    event Borrowed(address indexed borrower, uint256 amount);
     event Repaid(uint256 indexed loanId, uint256 amount);
     event Bought(uint256 indexed loanId, uint256 price);
-    event Withdrew(address indexed supplier, uint256 amount);
+    event Withdraw(address indexed supplier, uint256 amount);
     event Deposit(address indexed borrower, uint256 id);
 
     struct Loan {
@@ -73,68 +68,64 @@ contract NFTLendingPool is INFTLendingPool, ERC20 {
         underlyingToken.transfer(msg.sender, withdrawAmount);
     }
 
+
+
+    function borrowBalanceStoredInternal(address account) internal view returns (uint) {
+        /* Get borrowBalance and borrowIndex */
+        BorrowSnapshot storage borrowSnapshot = accountBorrows[account];
+
+        /* If borrowBalance = 0 then borrowIndex is likely also 0.
+         * Rather than failing the calculation with a division by 0, we immediately return 0 in this case.
+         */
+        if (borrowSnapshot.principal == 0) {
+            return 0;
+        }
+
+        /* Calculate new borrow balance using the interest index:
+         *  recentBorrowBalance = borrower.borrowBalance * market.borrowIndex / borrower.borrowIndex
+         */
+        uint principalTimesIndex = borrowSnapshot.principal * borrowIndex;
+        return principalTimesIndex / borrowSnapshot.interestIndex;
+    }
+
     function borrow(uint256 borrowAmount) external {
-        uint256 principalTimesIndex = borrowSnapshot.principal * borrowIndex;
-        uint256 TotalDebt = principalTimesIndex / borrowSnapshot.interestIndex;
 
         uint256 amount = borrowAmount;
-        assetPrice * 0.20;
-        loan[nbOfLoans] = Loan({
-            collection: collection,
-            tokenId: tokenId,
-            amount: amount,
-            borrowedBy: msg.sender
-        });
+       // assetPrice * 0.20;
         underlyingToken.transfer(msg.sender, amount);
         totalBorrowed += amount;
 
-        emit Borrowed(msg.sender, nbOfLoans, amount);
-        nbOfLoans++;
+        emit Borrowed(msg.sender, amount);
     }
 
     function depositNFT(IERC721 nft, uint256 id) external {
-        depositor[token][id] = msg.sender;
+        depositor[nft][id] = msg.sender;
         nft.transferFrom(msg.sender, address(this), id);
         emit Deposit(msg.sender, id);
     }
 
     function withdrawNFT(IERC721 nft, uint256 id) external {
-        delete depositor[token][id] = msg.sender;
+      require (depositor[nft][id] == msg.sender);
+        delete depositor[nft][id];
         nft.transferFrom(address(this), msg.sender, id);
         emit Withdraw(msg.sender, id);
     }
-
+ 
     function repayBorrow(uint256 repayAmount) external {
-        uint256 repaid = loan[loanId].amount +
-            pUSDC.transferFrom(msg.sender, address(this), repaid);
-        IERC721(loan[loanId].collection).transferFrom(
-            address(this),
-            msg.sender,
-            loan[loanId].tokenId
-        );
+      /*
+        uint256 repaid = loan[loanId].amount + underlyingToken.transferFrom(msg.sender, address(this), repaid);
         totalRepaid += repaid;
-
         emit Repaid(loanId, repaid);
+
+*/
     }
 
     function liquidateBorrow(IERC721 nft, uint256 id) external {}
 
+    function appraise(IERC721 nft, uint256 appraisal) external {}
+
     function exchangeRateStored() public returns (int128) {
         int128 half = ABDKMath64x64.divu(1, 2);
         return half;
-    }
-
-    function calculateCollateralValue(address borrower)
-        public
-        returns (uint256)
-    {
-        return 0;
-    }
-
-    function calculateCollateralValue(address borrower)
-        public
-        returns (uint256)
-    {
-        uint256 length = depositedCollateral[borrower].length;
     }
 }
