@@ -1,4 +1,3 @@
-const hre = require("hardhat");
 import { ethers } from 'ethers'
 import axios from 'axios'
 
@@ -17,24 +16,24 @@ let wallet = new ethers.Wallet(privateKey, httpProvider);
 // Connect the wallet w the appraiser
 let appraiserContractWithSigner = appraiserContract.connect(wallet);
 
-// Listen to the event, and then call our API
-appraiserContract.on("AppraisalRequested", (nftAddress, defaultProbability, loanTime, requesterAddress) => {
-    const api_endpoint = `https://nameless-plateau-97799.herokuapp.com//getLTV?address=${nftAddress}`;
-    // fields: collection_address, current_price, volatility, loan_time, rec_ltv, rec_loan_amount, liquidation_prob
+let contractAddresses = [
+    '0xbc4ca0eda7647a8ab7c2061c2e118a18a936f13d',
+    '0xf87e31492faf9a91b02ee0deaad50d51d56d5d4d',
+    '0x5cc5b05a8a13e3fbdb0bb9fccd98d38e50f90c38',
+    '0x1485297e942ce64E0870EcE60179dFda34b4C625'
+]
+
+function uploadAppraisal(contract_address) {
+    const api_endpoint = `https://nameless-plateau-97799.herokuapp.com//getLTV?address=${contract_address}`;
     const results = axios.get(api_endpoint).then((res) => {
         return res.data;
       });
-
-    // Send this information to the smart contract
-    let tx = await appraiserContractWithSigner.setAppraisal(nftAddress, results.volatility, results.current_price, results.rec_loan_amount);
-    await tx.wait();
-
-    appraiserContract.on("AppraisalSubmitted", (nftAddress, lastPrice, recommendedLoanAmount, lastUpdateTimestamp) => {
+      let tx = await appraiserContractWithSigner.setAppraisal(nftAddress, results.volatility, results.current_price, results.rec_loan_amount);
+      await tx.wait();
+      appraiserContract.on("AppraisalSubmitted", (nftAddress, lastPrice, recommendedLoanAmount, lastUpdateTimestamp) => {
         console.log(`Appraisal for NFT address ${nftAddress} submitted`)
     })
+}
 
-})
-
-
-
+contractAddresses.forEach(uploadAppraisal);
 
