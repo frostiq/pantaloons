@@ -10,8 +10,6 @@ import "./IAppraiser.sol";
 
 // TODO:
 // - borrowIndex updates
-// - liquidation
-// - calculateCollateralValue finish
 // - Superfluid
 // - Lender interest rate
 
@@ -20,16 +18,18 @@ contract NFTLendingPool is INFTLendingPool, ERC20 {
     using EnumerableSet for EnumerableSet.UintSet;
     using ABDKMath64x64 for int128;
 
-    IERC20 public underlyingToken;
+    constructor(IERC20 _underlyingToken, IAppraiser _appraiser) ERC20("Pantaloons USDC", "pUSDC") {
+        underlyingToken = _underlyingToken;
+        appraiser = _appraiser;
+    }
 
-    constructor() ERC20("Pantaloons USDC", "pUSDC") {}
+    IERC20 public underlyingToken;
+    IAppraiser public appraiser;
 
     uint256 public totalSupplied;
     uint256 public totalBorrowed;
     uint256 public totalRepaid;
     uint256 public borrowIndex = 1e18;
-
-    IAppraiser public appraiser;
 
     struct BorrowSnapshot {
         uint256 principal;
@@ -53,6 +53,7 @@ contract NFTLendingPool is INFTLendingPool, ERC20 {
     event Repaid(address indexed borrower, uint256 amount);
     event Withdraw(address indexed supplier, uint256 amount);
     event Deposit(address indexed borrower, uint256 id);
+    event Liquidation(IERC721 indexed nft, uint256 id, uint256 amount);
 
     struct Loan {
         IERC721 collection;
@@ -144,7 +145,6 @@ contract NFTLendingPool is INFTLendingPool, ERC20 {
         uint accountBorrowsNew = accountBorrowsPrev - repayAmount;
         uint totalBorrowsNew = totalBorrowed - repayAmount;
 
-        /* We write the previously calculated values into storage */
         accountBorrows[msg.sender].principal = accountBorrowsNew;
         accountBorrows[msg.sender].interestIndex = borrowIndex;
         totalBorrowed = totalBorrowsNew;
@@ -152,7 +152,26 @@ contract NFTLendingPool is INFTLendingPool, ERC20 {
         emit Repaid(msg.sender, repayAmount);
     }
 
-    function liquidateBorrow(IERC721 nft, uint256 id) external {}
+    function liquidateBorrow(IERC721 nft, uint256 id) external {
+        // TODO: LTV check
+        int128 discount = ABDKMath64x64.divu(4, 5);
+        uint256 liquidationAmount = discount.mulu(appraiser.getAppraisal(nft, id));
+        address borrower = depositor[nft][id];
+
+        underlyingToken.transferFrom(msg.sender, address(this), liquidationAmount);
+        
+        uint accountBorrowsPrev = borrowBalanceStoredInternal(borrower);
+        uint accountBorrowsNew = accountBorrowsPrev - liquidationAmount;
+        uint totalBorrowsNew = totalBorrowed - liquidationAmount;
+
+        accountBorrows[borrower].principal = accountBorrowsNew;
+        accountBorrows[borrower].interestIndex = borrowIndex;
+        totalBorrowed = totalBorrowsNew;
+
+        nft.safeTransferFrom(address(this), msg.sender, id);
+
+        emit Liquidation(nft, id, liquidationAmount);
+    }
 
     function exchangeRateStored() public returns (int128) {
         int128 half = ABDKMath64x64.divu(1, 2);
@@ -160,13 +179,13 @@ contract NFTLendingPool is INFTLendingPool, ERC20 {
     }
 
     function calculateCollateralValue(address borrower)
-        public
+        public view
         returns (uint256)
     {
         uint256 sum = 0;
-        address[] memory tokens = depositedCollateralToken[msg.sender].values();
+        address[] memory tokens = depositedCollateralToken[borrower].values();
         for (uint256 i = 0; i < tokens.length; i++) {
-            uint256[] memory ids = depositedCollateralTokenId[msg.sender][tokens[i]].values();
+            uint256[] memory ids = depositedCollateralTokenId[borrower][tokens[i]].values();
             for (uint256 j = 0; j < ids.length; j++) {
                 sum += appraiser.getAppraisal(IERC721(tokens[i]), ids[j]);
             }
